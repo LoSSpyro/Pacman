@@ -21,6 +21,7 @@ public class Parser : MonoBehaviour {
 	private List<GameObject> gameObjects = new List<GameObject> ();
 
 	private int endLine;
+	private int lineLength;
 
 	void Start () {
 		inputField = inputFieldObject.GetComponent<InputField> ();
@@ -90,6 +91,11 @@ public class Parser : MonoBehaviour {
 						temp4.name = "Corner " + i + "" + j;
 						gameObjects.Add (temp4);
 						break;
+					case 1:
+						GameObject temp5 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd")));
+						temp5.name = "DeadEnd " + i + "" + j;
+						gameObjects.Add (temp5);
+						break;
 					default:
 						break;
 					}
@@ -106,6 +112,7 @@ public class Parser : MonoBehaviour {
 			string line = lines [i];
 			if (!(line.Contains ("+") || line.Contains ("|") || line.Contains ("-"))) {
 				endLine = i-1;
+				lineLength = line.Length - 1;
 				break;
 			}
 		}
@@ -127,16 +134,25 @@ public class Parser : MonoBehaviour {
 		case ("Cornerdownright"):
 			rot = Quaternion.Euler (0, 90, 0);
 			break;
+		case ("DeadEndleft"):
+			rot = Quaternion.Euler (0, 90, 0);
+			break;
 		case "TCrossright":
 			rot = Quaternion.Euler (0, 180, 0);
 			break;
 		case "Cornerdownleft":
 			rot = Quaternion.Euler (0, 180, 0);
 			break;
+		case "DeadEndup":
+			rot = Quaternion.Euler (0, 180, 0);
+			break;
 		case "TCrossdown":
 			rot = Quaternion.Euler (0, 270, 0);
 			break;
 		case "Cornerupleft":
+			rot = Quaternion.Euler (0, 270, 0);
+			break;
+		case "DeadEndright":
 			rot = Quaternion.Euler (0, 270, 0);
 			break;
 		default:
@@ -147,34 +163,32 @@ public class Parser : MonoBehaviour {
 	}
 
 	int Openings(int zPos, int xPos) {
-		Debug.Log (zPos + " " + xPos + " " + endLine + " " + (lines [zPos].Length-1));
-		int openings = 4;
-		if (zPos == 0)
-			openings--;
-		if (zPos == endLine)
-			openings--;
-		if (xPos == 0)
-			openings--;
-		if (xPos == lines [zPos].Length - 1)
-			openings--;
-		if (zPos > 0) {
-			if (lines [zPos - 1] [xPos].Equals ("-"))
-				openings--;
+		Debug.Log (zPos + " " + xPos + " " + endLine + " " + lineLength);
+		int ports = 4;
+		if (zPos == 0) {
+			ports--;
+		} else if (("" + lines [zPos - 1] [xPos]).Equals ("-")) {
+			ports--;
 		}
-		if (zPos < endLine) {
-			if (lines [zPos + 1] [xPos].Equals ("-"))
-				openings--;
-		}
-		if (xPos > 0) {
-			if (lines [zPos] [xPos - 1].Equals ("|"))
-				openings--;
-		}
-		if (xPos < lines [zPos].Length - 1) {
-			if (lines [zPos] [xPos + 1].Equals ("|"))
-				openings--;
+		if (zPos == endLine) {
+			ports--;
+		} else if (zPos < endLine) {
+			if (("" + lines [zPos + 1] [xPos]).Equals ("-")) {
+				ports--;
 			}
-		Debug.Log (openings);
-		return openings;
+		}
+		if (xPos == 0) {
+			ports--;
+		} else if (("" + lines [zPos] [xPos - 1]).Equals ("|")) {
+			ports--;
+		}
+		if (xPos == lineLength) {
+			ports--;
+		} else if (("" + lines [zPos] [xPos + 1]).Equals ("|")) {
+			ports--;
+		}
+
+		return ports;
 	}
 
 	string GetDirection(int zPos, int xPos, string type) {
@@ -187,13 +201,13 @@ public class Parser : MonoBehaviour {
 				return type + "down";
 			else if (xPos == 0)
 				return type + "left";
-			else if (xPos == (lines [zPos].Length - 1))
+			else if (xPos == lineLength)
 				return type + "right";
-			else if (lines [zPos - 1] [xPos].Equals ("-"))
+			else if (("" + lines [zPos - 1] [xPos]).Equals ("-"))
 				return type + "up";
-			else if (lines [zPos + 1] [xPos].Equals ("-"))
+			else if (("" + lines [zPos + 1] [xPos]).Equals ("-"))
 				return type + "down";
-			else if (lines [zPos] [xPos - 1].Equals ("|"))
+			else if (("" + lines [zPos] [xPos - 1]).Equals ("|"))
 				return type + "left";
 			else
 				return type + "right";
@@ -201,12 +215,68 @@ public class Parser : MonoBehaviour {
 		case ("Corner"):
 			if (zPos == 0)
 				endstring += "up" + SecondPort (zPos, xPos);
-			else if (lines [zPos - 1] [xPos].Equals ("-"))
+			else if (("" + lines [zPos - 1] [xPos]).Equals ("-"))
 				endstring += "up" + SecondPort (zPos, xPos);
 			else if (zPos == endLine)
 				endstring += "down" + SecondPort (zPos, xPos);
-			else if (lines [zPos + 1] [xPos].Equals ("-"))
+			else if (("" + lines [zPos + 1] [xPos]).Equals ("-"))
 				endstring += "down" + SecondPort (zPos, xPos);
+			break;
+		case "DeadEnd":
+			if (zPos > 0 && zPos < endLine && xPos > 0 && xPos < lineLength) {
+				if (("" + lines [zPos + 1] [xPos]).Equals ("|") || ("" + lines [zPos + 1] [xPos]).Equals ("+"))
+					return type + "down";
+				if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
+					return type + "up";
+				if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
+					return type + "right";
+				if (("" + lines [zPos] [xPos - 1]).Equals ("-") || ("" + lines [zPos] [xPos - 1]).Equals ("+"))
+					return type + "left";
+			} else if (zPos == 0) {
+				if (("" + lines [zPos + 1] [xPos]).Equals ("|") || ("" + lines [zPos + 1] [xPos]).Equals ("+"))
+					return type + "down";
+				if (xPos == 0)
+					return type + "right";
+				if (xPos == lineLength)
+					return type + "left";
+				if (xPos > 0 && xPos < lineLength) {
+					if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
+						return type + "right";
+					else
+						return type + "left";
+				}
+			} else if (zPos == endLine) {
+				if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
+					return type + "up";
+				if (xPos == 0)
+					return type + "right";
+				if (xPos == lineLength)
+					return type + "left";
+				if (xPos > 0 && xPos < lineLength) {
+					if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
+						return type + "right";
+					else
+						return type + "left";
+				}
+			} else if (xPos == 0) {
+				if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
+					return type + "right";
+				if (zPos > 0 && zPos < endLine) {
+					if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
+						return type + "up";
+					else
+						return type + "down";
+				}
+			} else if (xPos == lineLength) {
+				if (("" + lines [zPos] [xPos - 1]).Equals ("-") || ("" + lines [zPos] [xPos - 1]).Equals ("+"))
+					return type + "left";
+				if (zPos > 0 && zPos < endLine) {
+					if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
+						return type + "up";
+					else
+						return type + "down";
+				}
+			}
 			break;
 		}
 		return endstring;
@@ -215,25 +285,14 @@ public class Parser : MonoBehaviour {
 	string SecondPort(int zPos, int xPos){
 		if (xPos == 0)
 			return "left";
-		else if (xPos == lines [zPos].Length - 1)
+		else if (xPos == lineLength)
 			return "right";
-		else if (lines [zPos] [xPos - 1].Equals ("|"))
+		else if (("" + lines [zPos] [xPos - 1]).Equals ("|"))
 			return "left";
 		else
 			return "right";
 		}
 
-	string GetName(GameObject go) {
-		if (go.name.Contains ("Corridor")) {
-			if (go.transform.rotation.y == 90)
-				return "CorridorH";
-			else
-				return "CorridorV";
-		} else if (go.name.Contains ("Cross"))
-			return "Cross";
-		else
-			return "";
-	}
 
 
 
