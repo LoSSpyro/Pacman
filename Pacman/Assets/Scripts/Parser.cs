@@ -17,11 +17,24 @@ public class Parser : MonoBehaviour {
 	public GameObject deadEnd;
 	public GameObject tCross;
 
+	public GameObject pacman;
+	public GameObject blinky;
+	public GameObject inky;
+	public GameObject pinky;
+	public GameObject clyde;
+
 	private List<string> lines = new List<string> ();
 	private List<GameObject> gameObjects = new List<GameObject> ();
 
 	private int endLine;
 	private int lineLength;
+
+	private int corridorCounter = 0;
+	private int crossCounter = 0;
+	private int tCrossCounter = 0;
+	private int cornerCounter = 0;
+	private int deadEndCounter = 0;
+	
 
 	void Start () {
 		inputField = inputFieldObject.GetComponent<InputField> ();
@@ -62,39 +75,45 @@ public class Parser : MonoBehaviour {
 		for (int i = 0; i < lines.Count; i++) {
 			string line = lines [i];
 			for (int j = 0; j < line.Length; j++) {
-				string c = ""+line [j];
+				string c = "" + line [j];
 				switch (c) {
 				case ("|"):
-					GameObject temp0 = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorV"));
-					temp0.name = "Corridor " + i + "" + j;
-					gameObjects.Add (temp0);
+					GameObject corridorV = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorV"));
+					corridorCounter++;
+					corridorV.name = "Corridor " + corridorCounter;
+					gameObjects.Add (corridorV);
 					break;
 				case "-":
-					GameObject temp1 = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorH"));
-					temp1.name = "Corridor " + i + "" + j;
-					gameObjects.Add (temp1);
+					GameObject corridorH = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorH"));
+					corridorCounter++;
+					corridorH.name = "Corridor " + corridorCounter;
+					gameObjects.Add (corridorH);
 					break;
 				case "+":
 					switch (Openings (i, j)) {
 					case 4:
-						GameObject temp2 = (GameObject)Instantiate (cross, getPosition (i, j), getRotation ("Cross"));
-						temp2.name = "Cross " + i + "" + j;
-						gameObjects.Add (temp2);
+						GameObject cross0 = (GameObject)Instantiate (cross, getPosition (i, j), getRotation ("Cross"));
+						crossCounter++;
+						cross0.name = "Cross " + crossCounter;
+						gameObjects.Add (cross0);
 						break;
 					case 3:
-						GameObject temp3 = (GameObject)Instantiate (tCross, getPosition (i, j), getRotation (GetDirection (i, j, "TCross")));
-						temp3.name = "TCross " + i + "" + j;
-						gameObjects.Add (temp3);
+						GameObject tCross0 = (GameObject)Instantiate (tCross, getPosition (i, j), getRotation (GetDirection (i, j, "TCross")));
+						tCrossCounter++;
+						tCross0.name = "TCross " + tCrossCounter;
+						gameObjects.Add (tCross0);
 						break;
 					case 2:
-						GameObject temp4 = (GameObject)Instantiate (corner, getPosition (i, j), getRotation (GetDirection (i, j, "Corner")));
-						temp4.name = "Corner " + i + "" + j;
-						gameObjects.Add (temp4);
+						GameObject corner0 = (GameObject)Instantiate (corner, getPosition (i, j), getRotation (GetDirection (i, j, "Corner")));
+						cornerCounter++;
+						corner0.name = "Corner " + cornerCounter;
+						gameObjects.Add (corner0);
 						break;
 					case 1:
-						GameObject temp5 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd")));
-						temp5.name = "DeadEnd " + i + "" + j;
-						gameObjects.Add (temp5);
+						GameObject deadEnd0 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd")));
+						deadEndCounter++;
+						deadEnd0.name = "DeadEnd " + deadEndCounter;
+						gameObjects.Add (deadEnd0);
 						break;
 					default:
 						break;
@@ -104,6 +123,44 @@ public class Parser : MonoBehaviour {
 					break;
 				}
 			}
+			float xPos;
+			float zPos;
+			if (line.Contains ("Pacman")) {
+				xPos = float.Parse ("" + line [7]);
+				zPos = float.Parse ("" + line [9]);
+				GameObject pacman0 = (GameObject)Instantiate (pacman, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
+				pacman0.transform.localScale = Vector3.one * 0.45f;
+				gameObjects.Add (pacman0);
+			}
+			if (line.Contains ("Blinky")) {
+				xPos = float.Parse ("" + line [7]);
+				zPos = float.Parse ("" + line [9]);
+				GameObject blinky0 = (GameObject)Instantiate (blinky, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
+				blinky0.transform.localScale = Vector3.one * 0.45f;
+				gameObjects.Add (blinky0);
+			}
+			if (line.Contains ("Inky")) {
+				xPos = float.Parse ("" + line [5]);
+				zPos = float.Parse ("" + line [7]);
+				GameObject inky0 = (GameObject)Instantiate (inky, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
+				inky0.transform.localScale = Vector3.one * 0.45f;
+				gameObjects.Add (inky0);
+			}
+			if (line.Contains ("Pinky")) {
+				xPos = float.Parse ("" + line [6]);
+				zPos = float.Parse ("" + line [8]);
+				GameObject pinky0 = (GameObject)Instantiate (pinky, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
+				pinky0.transform.localScale = Vector3.one * 0.45f;
+				gameObjects.Add (pinky0);
+			}
+			if (line.Contains ("Clyde")) {
+				xPos = float.Parse ("" + line [6]);
+				zPos = float.Parse ("" + line [8]);
+				GameObject clyde0 = (GameObject)Instantiate (clyde, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
+				clyde0.transform.localScale = Vector3.one * 0.45f;
+				gameObjects.Add (clyde0);
+			}
+			SetWayPoints ();
 		}
 	}
 
@@ -211,7 +268,6 @@ public class Parser : MonoBehaviour {
 				return type + "left";
 			else
 				return type + "right";
-			break;
 		case ("Corner"):
 			if (zPos == 0)
 				endstring += "up" + SecondPort (zPos, xPos);
@@ -232,44 +288,34 @@ public class Parser : MonoBehaviour {
 					return type + "right";
 				if (("" + lines [zPos] [xPos - 1]).Equals ("-") || ("" + lines [zPos] [xPos - 1]).Equals ("+"))
 					return type + "left";
-			} else if (zPos == 0) {
-				if (("" + lines [zPos + 1] [xPos]).Equals ("|") || ("" + lines [zPos + 1] [xPos]).Equals ("+"))
-					return type + "down";
-				if (xPos == 0)
-					return type + "right";
-				if (xPos == lineLength)
-					return type + "left";
-				if (xPos > 0 && xPos < lineLength) {
-					if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
-						return type + "right";
-					else
-						return type + "left";
-				}
-			} else if (zPos == endLine) {
-				if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
-					return type + "up";
-				if (xPos == 0)
-					return type + "right";
-				if (xPos == lineLength)
-					return type + "left";
-				if (xPos > 0 && xPos < lineLength) {
-					if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
-						return type + "right";
-					else
-						return type + "left";
-				}
-			} else if (xPos == 0) {
-				if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
-					return type + "right";
-				if (zPos > 0 && zPos < endLine) {
-					if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
-						return type + "up";
-					else
+			} else if (zPos == 0 || zPos == endLine) {
+				if (zPos == 0) {
+					if (("" + lines [zPos + 1] [xPos]).Equals ("|") || ("" + lines [zPos + 1] [xPos]).Equals ("+"))
 						return type + "down";
 				}
-			} else if (xPos == lineLength) {
-				if (("" + lines [zPos] [xPos - 1]).Equals ("-") || ("" + lines [zPos] [xPos - 1]).Equals ("+"))
+				if (zPos == endLine) {
+					if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
+						return type + "up";
+				}
+				if (xPos == 0)
+					return type + "right";
+				if (xPos == lineLength)
 					return type + "left";
+				if (xPos > 0 && xPos < lineLength) {
+					if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
+						return type + "right";
+					else
+						return type + "left";
+				}
+			} else if (xPos == 0 || xPos == lineLength) {
+				if (xPos == 0) {
+					if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
+						return type + "right";
+				}
+				if (xPos == lineLength) {
+					if (("" + lines [zPos] [xPos - 1]).Equals ("-") || ("" + lines [zPos] [xPos - 1]).Equals ("+"))
+						return type + "left";
+				}
 				if (zPos > 0 && zPos < endLine) {
 					if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
 						return type + "up";
@@ -293,7 +339,228 @@ public class Parser : MonoBehaviour {
 			return "right";
 		}
 
+	void SetWayPoints () {
+		foreach (GameObject tile in gameObjects) {
+			if (tile.CompareTag ("Tile")) {
+				WayPoint wp = tile.GetComponent<WayPoint> ();
+				GameObject up = null;
+				GameObject down = null;
+				GameObject right = null;
+				GameObject left = null;
+				string rot = tile.transform.rotation.y.ToString();
+				float xPos = tile.transform.position.x;
+				float zPos = tile.transform.position.z;
+				switch (GetName (tile)) {
+				case "Corridor":
+					if (rot == "90") {
+						foreach (GameObject go in gameObjects) {
+							if (FindSide ("left", go, xPos, zPos))
+								left = go;
+							if (FindSide ("right", go, xPos, zPos))
+								right = go;
+						}
+						wp.leftWaypoint = left.GetComponent<WayPoint> ();
+						wp.rightWaypoint = right.GetComponent<WayPoint> ();
+       					} else {
+						foreach (GameObject go in gameObjects) {
+							if (FindSide ("up", go, xPos, zPos))
+								up = go;
+							if (FindSide ("down", go, xPos, zPos))
+								down = go;
+						}
+						wp.upWaypoint = up.GetComponent<WayPoint> ();
+						wp.downWaypoint = down.GetComponent<WayPoint> ();
+					}
+					break;
+				case "Cross":
+					foreach (GameObject go in gameObjects) {
+						if (FindSide ("up", go, xPos, zPos))
+							up = go;
+						if (FindSide ("down", go, xPos, zPos))
+							down = go;
+						if (FindSide ("left", go, xPos, zPos))
+							left = go;
+						if (FindSide ("right", go, xPos, zPos))
+							right = go;
+					}
+					wp.upWaypoint = up.GetComponent<WayPoint> ();
+					wp.downWaypoint = down.GetComponent<WayPoint> ();
+					wp.leftWaypoint = left.GetComponent<WayPoint> ();
+					wp.rightWaypoint = right.GetComponent<WayPoint> ();
+					break;
+				case "TCross":
+					switch (rot) {
+					case "90":
+						foreach (GameObject go in gameObjects) {
+							if (FindSide ("down", go, xPos, zPos))
+								down = go;
+							if (FindSide ("left", go, xPos, zPos))
+								left = go;
+							if (FindSide ("right", go, xPos, zPos))
+								right = go;
+						}
+						wp.downWaypoint = down.GetComponent<WayPoint> ();
+						wp.leftWaypoint = left.GetComponent<WayPoint> ();
+						wp.rightWaypoint = right.GetComponent<WayPoint> ();
+						break;
+					case "180":
+						foreach (GameObject go in gameObjects) {
+							if (FindSide ("up", go, xPos, zPos))
+								up = go;
+							if (FindSide ("down", go, xPos, zPos))
+								down = go;
+							if (FindSide ("left", go, xPos, zPos))
+								left = go;
+						}
+						wp.upWaypoint = up.GetComponent<WayPoint> ();
+						wp.downWaypoint = down.GetComponent<WayPoint> ();
+						wp.leftWaypoint = left.GetComponent<WayPoint> ();
+						break;
+					case "270":
+						foreach (GameObject go in gameObjects) {
+							if (FindSide ("up", go, xPos, zPos))
+								up = go;
+							if (FindSide ("left", go, xPos, zPos))
+								left = go;
+							if (FindSide ("right", go, xPos, zPos))
+								right = go;
+						}
+						wp.upWaypoint = up.GetComponent<WayPoint> ();
+						wp.leftWaypoint = left.GetComponent<WayPoint> ();
+						wp.rightWaypoint = right.GetComponent<WayPoint> ();
+						break;
+					default:
+						foreach (GameObject go in gameObjects) {
+							if (FindSide ("up", go, xPos, zPos))
+								up = go;
+							if (FindSide ("down", go, xPos, zPos))
+								down = go;
+							if (FindSide ("right", go, xPos, zPos))
+								right = go;
+						}
+						wp.upWaypoint = up.GetComponent<WayPoint> ();
+						wp.downWaypoint = down.GetComponent<WayPoint> ();
+						wp.rightWaypoint = right.GetComponent<WayPoint> ();
+						break;
 
+					}
+					break;
+				case "Corner":
+					switch (rot) {
+					case "90":
+						foreach (GameObject go in gameObjects) {
+							if (FindSide ("up", go, xPos, zPos))
+								up = go;
+							if (FindSide ("left", go, xPos, zPos))
+								left = go;
+						}
+						wp.upWaypoint = up.GetComponent<WayPoint> ();
+						wp.leftWaypoint = left.GetComponent<WayPoint> ();
+						break;
+					case "180":
+						foreach (GameObject go in gameObjects) {
+							if (FindSide ("up", go, xPos, zPos))
+								up = go;
+							if (FindSide ("right", go, xPos, zPos))
+								right = go;
+						}
+						wp.upWaypoint = up.GetComponent<WayPoint> ();
+						wp.rightWaypoint = right.GetComponent<WayPoint> ();
+						break;
+					case "270":
+						foreach (GameObject go in gameObjects) {
+							if (FindSide ("down", go, xPos, zPos))
+								down = go;
+							if (FindSide ("right", go, xPos, zPos))
+								right = go;
+						}
+						wp.downWaypoint = down.GetComponent<WayPoint> ();
+						wp.rightWaypoint = right.GetComponent<WayPoint> ();
+						break;
+					default:
+						foreach (GameObject go in gameObjects) {
+							if (FindSide ("down", go, xPos, zPos))
+								down = go;
+							if (FindSide ("left", go, xPos, zPos))
+								left = go;
+						}
+						wp.downWaypoint = down.GetComponent<WayPoint> ();
+						wp.leftWaypoint = left.GetComponent<WayPoint> ();
+						break;
+					}
+					break;
+				case "DeadEnd":
+					switch (rot) {
+					case "90":
+						foreach (GameObject go in gameObjects)
+							if (FindSide ("left", go, xPos, zPos))
+								left = go;
+						wp.leftWaypoint = left.GetComponent<WayPoint> ();
+						break;
+					case "180":
+						foreach (GameObject go in gameObjects)
+							if (FindSide ("up", go, xPos, zPos))
+								up = go;
+						wp.upWaypoint = up.GetComponent<WayPoint> ();
+						break;
+					case "270":
+						foreach (GameObject go in gameObjects)
+							if (FindSide ("right", go, xPos, zPos))
+								right = go;
+						wp.rightWaypoint = right.GetComponent<WayPoint> ();
+						break;
+					default:
+						foreach (GameObject go in gameObjects)
+							if (FindSide ("down", go, xPos, zPos))
+								down = go;
+						wp.downWaypoint = down.GetComponent<WayPoint> ();
+						break;
+					}
+					break;
+				}
+			}
+		}
+	}
 
+	string GetName (GameObject go) {
+		string name = "";
+		if (go.name.Contains ("Corridor"))
+			name = "Corridor";
+		if (go.name.Contains ("Cross"))
+			name = "Cross";
+		if (go.name.Contains ("TCross"))
+			name = "TCross";
+		if (go.name.Contains ("Corner"))
+			name =  "Corner";
+		if (go.name.Contains ("DeadEnd"))
+			name = "DeadEnd";
+		return name;
+		
+	}
+
+	bool FindSide(string side, GameObject go, float xPos, float zPos) {
+		bool direction = false;
+		switch (side) {
+		case "up":
+			if (go.transform.position.z == zPos + 1)
+				direction = true;
+			break;
+		case "down":
+			if (go.transform.position.z == zPos - 1)
+				direction = true;
+			break;
+		case "left":
+			if (go.transform.position.x == xPos - 1)
+				direction = true;
+			break;
+		case "right":
+			if (go.transform.position.x == xPos + 1)
+				direction = true;
+			break;
+		default:
+			break;
+		}
+		return direction;
+	}
 
 }
