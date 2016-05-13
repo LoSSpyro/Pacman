@@ -105,7 +105,6 @@ public class EnemyBehaviourScript : MonoBehaviour {
 
 	//handle running into Pacman
 	public void OnTriggerEnter(Collider col){
-
 		if (col.tag.Equals("Pacman")) {
 			if (col.gameObject.GetComponent<PlayerControlScript>().isInvincible()) {
 				Destroy(gameObject);

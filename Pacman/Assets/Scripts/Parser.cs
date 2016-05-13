@@ -72,27 +72,46 @@ public class Parser : MonoBehaviour {
 
 	void makeField (List<string> lines) {
 		GetEndLine ();
-		List<GameObject> entities = new List<GameObject> ();
 		for (int i = 0; i < lines.Count; i++) {
 			string line = lines [i];
 			List <GameObject> lineGameObjects = new List<GameObject> ();
 			for (int j = 0; j < line.Length; j++) {
 				string c = "" + line [j];
 				switch (c) {
-				case ("|"):
-					GameObject corridorV = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorV"));
-					corridorCounter++;
-					corridorV.name = "Corridor " + corridorCounter;
-					lineGameObjects.Add (corridorV);
+				case "|":
+					switch (Openings ("|", i, j)) {
+					case 2:
+						GameObject corridorV = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorV"));
+						corridorCounter++;
+						corridorV.name = "Corridor " + corridorCounter;
+						lineGameObjects.Add (corridorV);
+						break;
+					case 1:
+						GameObject deadEnd0 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd")));
+						deadEndCounter++;
+						deadEnd0.name = "DeadEnd " + deadEndCounter;
+						lineGameObjects.Add (deadEnd0);
+						break;
+					}
 					break;
 				case "-":
-					GameObject corridorH = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorH"));
-					corridorCounter++;
-					corridorH.name = "Corridor " + corridorCounter;
-					lineGameObjects.Add (corridorH);
+					switch (Openings ("-", i, j)) {
+					case 2:
+						GameObject corridorH = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorH"));
+						corridorCounter++;
+						corridorH.name = "Corridor " + corridorCounter;
+						lineGameObjects.Add (corridorH);
+						break;
+					case 1:
+						GameObject deadEnd0 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd")));
+						deadEndCounter++;
+						deadEnd0.name = "DeadEnd " + deadEndCounter;
+						lineGameObjects.Add (deadEnd0);
+						break;
+					}
 					break;
 				case "+":
-					switch (Openings (i, j)) {
+					switch (Openings ("+", i, j)) {
 					case 4:
 						GameObject cross0 = (GameObject)Instantiate (cross, getPosition (i, j), getRotation ("Cross"));
 						crossCounter++;
@@ -112,10 +131,10 @@ public class Parser : MonoBehaviour {
 						lineGameObjects.Add (corner0);
 						break;
 					case 1:
-						GameObject deadEnd0 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd")));
+						GameObject deadEnd1 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd")));
 						deadEndCounter++;
-						deadEnd0.name = "DeadEnd " + deadEndCounter;
-						lineGameObjects.Add (deadEnd0);
+						deadEnd1.name = "DeadEnd " + deadEndCounter;
+						lineGameObjects.Add (deadEnd1);
 						break;
 					default:
 						break;
@@ -127,47 +146,6 @@ public class Parser : MonoBehaviour {
 			
 			}
 			gameObjects.Add(lineGameObjects);
-			float xPos;
-			float zPos;
-			if (line.Contains ("Pacman")) {
-				xPos = float.Parse ("" + line [7]);
-				zPos = float.Parse ("" + line [9]);
-				GameObject pacman0 = (GameObject)Instantiate (pacman, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
-				pacman0.transform.localScale = Vector3.one * 0.45f;
-				entities.Add (pacman0);
-			}
-			if (line.Contains ("Blinky")) {
-				xPos = float.Parse ("" + line [7]);
-				zPos = float.Parse ("" + line [9]);
-				GameObject blinky0 = (GameObject)Instantiate (blinky, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
-				blinky0.transform.localScale = Vector3.one * 0.45f;
-				entities.Add (blinky0);
-			}
-			if (line.Contains ("Inky")) {
-				xPos = float.Parse ("" + line [5]);
-				zPos = float.Parse ("" + line [7]);
-				GameObject inky0 = (GameObject)Instantiate (inky, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
-				inky0.transform.localScale = Vector3.one * 0.45f;
-				entities.Add (inky0);
-			}
-			if (line.Contains ("Pinky")) {
-				xPos = float.Parse ("" + line [6]);
-				zPos = float.Parse ("" + line [8]);
-				GameObject pinky0 = (GameObject)Instantiate (pinky, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
-				pinky0.transform.localScale = Vector3.one * 0.45f;
-				entities.Add (pinky0);
-			}
-			if (line.Contains ("Clyde")) {
-				xPos = float.Parse ("" + line [6]);
-				zPos = float.Parse ("" + line [8]);
-				GameObject clyde0 = (GameObject)Instantiate (clyde, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
-				clyde0.transform.localScale = Vector3.one * 0.45f;
-				entities.Add (clyde0);
-			}
-//			foreach (List<GameObject> goline in gameObjects) {
-//				foreach (GameObject gol in goline)
-//					Debug.Log (gol.name);
-//			}
 		}
 		SetWayPoints ();			
 		gameObjects.Add (GetEntities());
@@ -228,32 +206,63 @@ public class Parser : MonoBehaviour {
 		return rot;
 	}
 
-	int Openings(int zPos, int xPos) {
-		Debug.Log (zPos + " " + xPos + " " + endLine + " " + lineLength);
-		int ports = 4;
-		if (zPos == 0) {
-			ports--;
-		} else if (("" + lines [zPos - 1] [xPos]).Equals ("-")) {
-			ports--;
-		}
-		if (zPos == endLine) {
-			ports--;
-		} else if (zPos < endLine) {
-			if (("" + lines [zPos + 1] [xPos]).Equals ("-")) {
+	int Openings(string type, int zPos, int xPos) {
+		int ports = 0;
+		switch (type) {
+		case "+":
+			ports = 4;
+			if (zPos == 0) {
+				ports--;
+			} else if (("" + lines [zPos - 1] [xPos]).Equals ("-")) {
 				ports--;
 			}
+			if (zPos == endLine) {
+				ports--;
+			} else if (zPos < endLine) {
+				if (("" + lines [zPos + 1] [xPos]).Equals ("-")) {
+					ports--;
+				}
+			}
+			if (xPos == 0) {
+				ports--;
+			} else if (("" + lines [zPos] [xPos - 1]).Equals ("|")) {
+				ports--;
+			}
+			if (xPos == lineLength) {
+				ports--;
+			} else if (("" + lines [zPos] [xPos + 1]).Equals ("|")) {
+				ports--;
+			}
+			break;
+		case "|":
+			ports = 2;
+			if (zPos == 0) {
+				ports--;
+			} else if (("" + lines [zPos - 1] [xPos]).Equals ("-")) {
+				ports--;
+			}
+			if (zPos == endLine) {
+				ports--;
+			} else if (zPos < endLine) {
+				if (("" + lines [zPos + 1] [xPos]).Equals ("-")) {
+					ports--;
+				}
+			}
+			break;
+		case "-":
+			ports = 2;
+			if (xPos == 0) {
+				ports--;
+			} else if (("" + lines [zPos] [xPos - 1]).Equals ("|")) {
+				ports--;
+			}
+			if (xPos == lineLength) {
+				ports--;
+			} else if (("" + lines [zPos] [xPos + 1]).Equals ("|")) {
+				ports--;
+			}
+			break;
 		}
-		if (xPos == 0) {
-			ports--;
-		} else if (("" + lines [zPos] [xPos - 1]).Equals ("|")) {
-			ports--;
-		}
-		if (xPos == lineLength) {
-			ports--;
-		} else if (("" + lines [zPos] [xPos + 1]).Equals ("|")) {
-			ports--;
-		}
-
 		return ports;
 	}
 
@@ -356,17 +365,14 @@ public class Parser : MonoBehaviour {
 				switch (GetName (go)) {
 				case "Corridor":
 					if ((int)go.transform.rotation.eulerAngles.y == 90) {
-						Debug.Log ("CorridorH " + i + "" + j);
 						SetLeftWayPoint (go, i, j);
 						SetRightWayPoint (go, i, j);
 					} else {
-						Debug.Log ("CorridorV " + i + "" + j);
 						SetUpWayPoint (go, i, j);
 						SetDownWayPoint(go, i, j);
 					}
 					break;
 				case "Cross":
-					Debug.Log ("Cross " + i + "" + j);
 					SetUpWayPoint (go, i, j);
 					SetDownWayPoint (go, i, j);
 					SetLeftWayPoint (go, i, j);
@@ -375,25 +381,21 @@ public class Parser : MonoBehaviour {
 				case "TCross":
 					switch ((int)go.transform.rotation.eulerAngles.y) {
 					case 90:
-						Debug.Log ("TCrossUp " + i + "" + j);
 						SetDownWayPoint (go, i, j);
 						SetLeftWayPoint (go, i, j);
 						SetRightWayPoint (go, i, j);
 						break;
 					case 180:
-						Debug.Log ("TCrossRight " + i + "" + j);
 						SetUpWayPoint (go, i, j);
 						SetDownWayPoint (go, i, j);
 						SetLeftWayPoint (go, i, j);
 						break;
 					case 270:
-						Debug.Log ("TCrossDown " + i + "" + j);
 						SetUpWayPoint (go, i, j);
 						SetLeftWayPoint (go, i, j);
 						SetRightWayPoint (go, i, j);
 						break;
 					default:
-						Debug.Log ("TCorssLeft " + i + "" + j);
 						SetUpWayPoint (go, i, j);
 						SetDownWayPoint (go, i, j);
 						SetRightWayPoint (go, i, j);
@@ -403,22 +405,18 @@ public class Parser : MonoBehaviour {
 				case "Corner":
 					switch ((int)go.transform.rotation.eulerAngles.y) {
 					case 90:
-						Debug.Log ("CornerUpLeft " + i + "" + j);
 						SetUpWayPoint (go, i, j);
 						SetLeftWayPoint (go, i, j);
 						break;
 					case 180:
-						Debug.Log ("CornerUpRight " + i + "" + j);
 						SetUpWayPoint (go, i, j);
 						SetRightWayPoint (go, i, j);
 						break;
 					case 270:
-						Debug.Log ("CornerDownRight " + i + "" + j);
 						SetDownWayPoint (go, i, j);
 						SetRightWayPoint (go, i, j);
 						break;
 					default:
-						Debug.Log ("CornerDownLeft " + i + "" + j);
 						SetDownWayPoint (go, i, j);
 						SetLeftWayPoint (go, i, j);
 						break;
@@ -427,19 +425,15 @@ public class Parser : MonoBehaviour {
 				case "DeadEnd":
 					switch ((int)go.transform.rotation.eulerAngles.y) {
 					case 90:
-						Debug.Log ("DeadEndLeft " + i + "" + j);
 						SetLeftWayPoint (go, i, j);
 						break;
 					case 180:
-						Debug.Log ("DeadEndUp " + i + "" + j);
 						SetUpWayPoint (go, i, j);
 						break;
 					case 270:
-						Debug.Log ("DeadEndRight " + i + "" + j);
 						SetRightWayPoint (go, i, j);
 						break;
 					default:
-						Debug.Log ("DeadEndDown " + i + "" + j);
 						SetDownWayPoint (go, i, j);
 						break;
 					}
@@ -465,32 +459,7 @@ public class Parser : MonoBehaviour {
 			name = "DeadEnd";
 		return name;
 		
-	}
-
-	bool FindSide(string side, GameObject go, float xPos, float zPos) {
-		bool direction = false;
-		switch (side) {
-		case "up":
-			if (go.transform.position.z == zPos + 1)
-				direction = true;
-			break;
-		case "down":
-			if (go.transform.position.z == zPos - 1)
-				direction = true;
-			break;
-		case "left":
-			if (go.transform.position.x == xPos - 1)
-				direction = true;
-			break;
-		case "right":
-			if (go.transform.position.x == xPos + 1)
-				direction = true;
-			break;
-		default:
-			break;
-		}
-		return direction;
-	}
+  	}
 
 	void SetUpWayPoint(GameObject go, int zPos, int xPos) {
 		go.GetComponent<WayPoint> ().upWaypoint = gameObjects [zPos - 1] [xPos].GetComponent<WayPoint> ();
@@ -509,9 +478,56 @@ public class Parser : MonoBehaviour {
 	}
 
 	List<GameObject> GetEntities () {
+		List<GameObject> entities = new List<GameObject> ();
 		for (int i = endLine + 1; i < lines.Count; i++) {
-			
+			int xPos;
+			int zPos;
+			if (lines[i].Contains ("Pacman")) {
+				xPos = int.Parse ("" + lines[i] [7]);
+				zPos = int.Parse ("" + lines[i] [9]);
+				GameObject pacman0 = (GameObject)Instantiate (pacman, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
+				pacman0.name = "Pacman";
+				pacman0.transform.localScale = Vector3.one * 0.45f;
+				entities.Add (pacman0);
+			}
+			if (lines[i].Contains ("Blinky")) {
+				xPos = int.Parse ("" + lines[i] [7]);
+				zPos = int.Parse ("" + lines[i] [9]);
+				GameObject blinky0 = (GameObject)Instantiate (blinky, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
+				blinky0.name = "Blinky";
+				blinky0.transform.localScale = Vector3.one * 0.45f;
+				blinky0.GetComponent<EnemyBehaviourScript> ().currentWaypoint = gameObjects [zPos] [xPos].GetComponent<WayPoint> ();
+				entities.Add (blinky0);
+			}
+			if (lines[i].Contains ("Inky")) {
+				xPos = int.Parse ("" + lines[i] [5]);
+				zPos = int.Parse ("" + lines[i] [7]);
+				GameObject inky0 = (GameObject)Instantiate (inky, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
+				inky0.name = "Inky";
+				inky0.transform.localScale = Vector3.one * 0.45f;
+				inky0.GetComponent<EnemyBehaviourScript> ().currentWaypoint = gameObjects [zPos] [xPos].GetComponent<WayPoint> ();
+				entities.Add (inky0);
+			}
+			if (lines[i].Contains ("Pinky")) {
+				xPos = int.Parse ("" + lines[i] [6]);
+				zPos = int.Parse ("" + lines[i] [8]);
+				GameObject pinky0 = (GameObject)Instantiate (pinky, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
+				pinky0.name = "Pinky";
+				pinky0.transform.localScale = Vector3.one * 0.45f;
+				pinky0.GetComponent<EnemyBehaviourScript> ().currentWaypoint = gameObjects [zPos] [xPos].GetComponent<WayPoint> ();
+				entities.Add (pinky0);
+			}
+			if (lines[i].Contains ("Clyde")) {
+				xPos = int.Parse ("" + lines[i] [6]);
+				zPos = int.Parse ("" + lines[i] [8]);
+				GameObject clyde0 = (GameObject)Instantiate (clyde, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
+				clyde0.name = "Clyde";
+				clyde0.transform.localScale = Vector3.one * 0.45f;
+				clyde0.GetComponent<EnemyBehaviourScript> ().currentWaypoint = gameObjects [zPos] [xPos].GetComponent<WayPoint> ();
+				entities.Add (clyde0);
+			}
 		}
+		return entities;
 	}
 
 }
