@@ -24,7 +24,7 @@ public class Parser : MonoBehaviour {
 	public GameObject clyde;
 
 	private List<string> lines = new List<string> ();
-	private List<GameObject> gameObjects = new List<GameObject> ();
+	private List<List<GameObject>> gameObjects = new List<List<GameObject>> ();
 
 	private int endLine;
 	private int lineLength;
@@ -72,8 +72,10 @@ public class Parser : MonoBehaviour {
 
 	void makeField (List<string> lines) {
 		GetEndLine ();
+		List<GameObject> entities = new List<GameObject> ();
 		for (int i = 0; i < lines.Count; i++) {
 			string line = lines [i];
+			List <GameObject> lineGameObjects = new List<GameObject> ();
 			for (int j = 0; j < line.Length; j++) {
 				string c = "" + line [j];
 				switch (c) {
@@ -81,13 +83,13 @@ public class Parser : MonoBehaviour {
 					GameObject corridorV = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorV"));
 					corridorCounter++;
 					corridorV.name = "Corridor " + corridorCounter;
-					gameObjects.Add (corridorV);
+					lineGameObjects.Add (corridorV);
 					break;
 				case "-":
 					GameObject corridorH = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorH"));
 					corridorCounter++;
 					corridorH.name = "Corridor " + corridorCounter;
-					gameObjects.Add (corridorH);
+					lineGameObjects.Add (corridorH);
 					break;
 				case "+":
 					switch (Openings (i, j)) {
@@ -95,25 +97,25 @@ public class Parser : MonoBehaviour {
 						GameObject cross0 = (GameObject)Instantiate (cross, getPosition (i, j), getRotation ("Cross"));
 						crossCounter++;
 						cross0.name = "Cross " + crossCounter;
-						gameObjects.Add (cross0);
+						lineGameObjects.Add (cross0);
 						break;
 					case 3:
 						GameObject tCross0 = (GameObject)Instantiate (tCross, getPosition (i, j), getRotation (GetDirection (i, j, "TCross")));
 						tCrossCounter++;
 						tCross0.name = "TCross " + tCrossCounter;
-						gameObjects.Add (tCross0);
+						lineGameObjects.Add (tCross0);
 						break;
 					case 2:
 						GameObject corner0 = (GameObject)Instantiate (corner, getPosition (i, j), getRotation (GetDirection (i, j, "Corner")));
 						cornerCounter++;
 						corner0.name = "Corner " + cornerCounter;
-						gameObjects.Add (corner0);
+						lineGameObjects.Add (corner0);
 						break;
 					case 1:
 						GameObject deadEnd0 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd")));
 						deadEndCounter++;
 						deadEnd0.name = "DeadEnd " + deadEndCounter;
-						gameObjects.Add (deadEnd0);
+						lineGameObjects.Add (deadEnd0);
 						break;
 					default:
 						break;
@@ -121,8 +123,10 @@ public class Parser : MonoBehaviour {
 					break;
 				default:
 					break;
-				}
+     				}
+			
 			}
+			gameObjects.Add(lineGameObjects);
 			float xPos;
 			float zPos;
 			if (line.Contains ("Pacman")) {
@@ -130,38 +134,43 @@ public class Parser : MonoBehaviour {
 				zPos = float.Parse ("" + line [9]);
 				GameObject pacman0 = (GameObject)Instantiate (pacman, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
 				pacman0.transform.localScale = Vector3.one * 0.45f;
-				gameObjects.Add (pacman0);
+				entities.Add (pacman0);
 			}
 			if (line.Contains ("Blinky")) {
 				xPos = float.Parse ("" + line [7]);
 				zPos = float.Parse ("" + line [9]);
 				GameObject blinky0 = (GameObject)Instantiate (blinky, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
 				blinky0.transform.localScale = Vector3.one * 0.45f;
-				gameObjects.Add (blinky0);
+				entities.Add (blinky0);
 			}
 			if (line.Contains ("Inky")) {
 				xPos = float.Parse ("" + line [5]);
 				zPos = float.Parse ("" + line [7]);
 				GameObject inky0 = (GameObject)Instantiate (inky, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
 				inky0.transform.localScale = Vector3.one * 0.45f;
-				gameObjects.Add (inky0);
+				entities.Add (inky0);
 			}
 			if (line.Contains ("Pinky")) {
 				xPos = float.Parse ("" + line [6]);
 				zPos = float.Parse ("" + line [8]);
 				GameObject pinky0 = (GameObject)Instantiate (pinky, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
 				pinky0.transform.localScale = Vector3.one * 0.45f;
-				gameObjects.Add (pinky0);
+				entities.Add (pinky0);
 			}
 			if (line.Contains ("Clyde")) {
 				xPos = float.Parse ("" + line [6]);
 				zPos = float.Parse ("" + line [8]);
 				GameObject clyde0 = (GameObject)Instantiate (clyde, new Vector3 (xPos, 0.5f, -zPos), Quaternion.identity);
 				clyde0.transform.localScale = Vector3.one * 0.45f;
-				gameObjects.Add (clyde0);
+				entities.Add (clyde0);
 			}
-			SetWayPoints ();
+//			foreach (List<GameObject> goline in gameObjects) {
+//				foreach (GameObject gol in goline)
+//					Debug.Log (gol.name);
+//			}
 		}
+		SetWayPoints ();			
+		gameObjects.Add (GetEntities());
 	}
 
 	void GetEndLine () {
@@ -340,182 +349,102 @@ public class Parser : MonoBehaviour {
 		}
 
 	void SetWayPoints () {
-		foreach (GameObject tile in gameObjects) {
-			if (tile.CompareTag ("Tile")) {
-				WayPoint wp = tile.GetComponent<WayPoint> ();
-				GameObject up = null;
-				GameObject down = null;
-				GameObject right = null;
-				GameObject left = null;
-				string rot = tile.transform.rotation.y.ToString();
-				float xPos = tile.transform.position.x;
-				float zPos = tile.transform.position.z;
-				switch (GetName (tile)) {
+		for (int i = 0; i < gameObjects.Count; i++) {
+			List<GameObject> line = gameObjects [i];
+			for (int j = 0; j < line.Count; j++) {
+				GameObject go = line [j];
+				switch (GetName (go)) {
 				case "Corridor":
-					if (rot == "90") {
-						foreach (GameObject go in gameObjects) {
-							if (FindSide ("left", go, xPos, zPos))
-								left = go;
-							if (FindSide ("right", go, xPos, zPos))
-								right = go;
-						}
-						wp.leftWaypoint = left.GetComponent<WayPoint> ();
-						wp.rightWaypoint = right.GetComponent<WayPoint> ();
-       					} else {
-						foreach (GameObject go in gameObjects) {
-							if (FindSide ("up", go, xPos, zPos))
-								up = go;
-							if (FindSide ("down", go, xPos, zPos))
-								down = go;
-						}
-						wp.upWaypoint = up.GetComponent<WayPoint> ();
-						wp.downWaypoint = down.GetComponent<WayPoint> ();
+					if ((int)go.transform.rotation.eulerAngles.y == 90) {
+						Debug.Log ("CorridorH " + i + "" + j);
+						SetLeftWayPoint (go, i, j);
+						SetRightWayPoint (go, i, j);
+					} else {
+						Debug.Log ("CorridorV " + i + "" + j);
+						SetUpWayPoint (go, i, j);
+						SetDownWayPoint(go, i, j);
 					}
 					break;
 				case "Cross":
-					foreach (GameObject go in gameObjects) {
-						if (FindSide ("up", go, xPos, zPos))
-							up = go;
-						if (FindSide ("down", go, xPos, zPos))
-							down = go;
-						if (FindSide ("left", go, xPos, zPos))
-							left = go;
-						if (FindSide ("right", go, xPos, zPos))
-							right = go;
-					}
-					wp.upWaypoint = up.GetComponent<WayPoint> ();
-					wp.downWaypoint = down.GetComponent<WayPoint> ();
-					wp.leftWaypoint = left.GetComponent<WayPoint> ();
-					wp.rightWaypoint = right.GetComponent<WayPoint> ();
+					Debug.Log ("Cross " + i + "" + j);
+					SetUpWayPoint (go, i, j);
+					SetDownWayPoint (go, i, j);
+					SetLeftWayPoint (go, i, j);
+					SetRightWayPoint (go, i, j);
 					break;
 				case "TCross":
-					switch (rot) {
-					case "90":
-						foreach (GameObject go in gameObjects) {
-							if (FindSide ("down", go, xPos, zPos))
-								down = go;
-							if (FindSide ("left", go, xPos, zPos))
-								left = go;
-							if (FindSide ("right", go, xPos, zPos))
-								right = go;
-						}
-						wp.downWaypoint = down.GetComponent<WayPoint> ();
-						wp.leftWaypoint = left.GetComponent<WayPoint> ();
-						wp.rightWaypoint = right.GetComponent<WayPoint> ();
+					switch ((int)go.transform.rotation.eulerAngles.y) {
+					case 90:
+						Debug.Log ("TCrossUp " + i + "" + j);
+						SetDownWayPoint (go, i, j);
+						SetLeftWayPoint (go, i, j);
+						SetRightWayPoint (go, i, j);
 						break;
-					case "180":
-						foreach (GameObject go in gameObjects) {
-							if (FindSide ("up", go, xPos, zPos))
-								up = go;
-							if (FindSide ("down", go, xPos, zPos))
-								down = go;
-							if (FindSide ("left", go, xPos, zPos))
-								left = go;
-						}
-						wp.upWaypoint = up.GetComponent<WayPoint> ();
-						wp.downWaypoint = down.GetComponent<WayPoint> ();
-						wp.leftWaypoint = left.GetComponent<WayPoint> ();
+					case 180:
+						Debug.Log ("TCrossRight " + i + "" + j);
+						SetUpWayPoint (go, i, j);
+						SetDownWayPoint (go, i, j);
+						SetLeftWayPoint (go, i, j);
 						break;
-					case "270":
-						foreach (GameObject go in gameObjects) {
-							if (FindSide ("up", go, xPos, zPos))
-								up = go;
-							if (FindSide ("left", go, xPos, zPos))
-								left = go;
-							if (FindSide ("right", go, xPos, zPos))
-								right = go;
-						}
-						wp.upWaypoint = up.GetComponent<WayPoint> ();
-						wp.leftWaypoint = left.GetComponent<WayPoint> ();
-						wp.rightWaypoint = right.GetComponent<WayPoint> ();
+					case 270:
+						Debug.Log ("TCrossDown " + i + "" + j);
+						SetUpWayPoint (go, i, j);
+						SetLeftWayPoint (go, i, j);
+						SetRightWayPoint (go, i, j);
 						break;
 					default:
-						foreach (GameObject go in gameObjects) {
-							if (FindSide ("up", go, xPos, zPos))
-								up = go;
-							if (FindSide ("down", go, xPos, zPos))
-								down = go;
-							if (FindSide ("right", go, xPos, zPos))
-								right = go;
-						}
-						wp.upWaypoint = up.GetComponent<WayPoint> ();
-						wp.downWaypoint = down.GetComponent<WayPoint> ();
-						wp.rightWaypoint = right.GetComponent<WayPoint> ();
+						Debug.Log ("TCorssLeft " + i + "" + j);
+						SetUpWayPoint (go, i, j);
+						SetDownWayPoint (go, i, j);
+						SetRightWayPoint (go, i, j);
 						break;
-
 					}
 					break;
 				case "Corner":
-					switch (rot) {
-					case "90":
-						foreach (GameObject go in gameObjects) {
-							if (FindSide ("up", go, xPos, zPos))
-								up = go;
-							if (FindSide ("left", go, xPos, zPos))
-								left = go;
-						}
-						wp.upWaypoint = up.GetComponent<WayPoint> ();
-						wp.leftWaypoint = left.GetComponent<WayPoint> ();
+					switch ((int)go.transform.rotation.eulerAngles.y) {
+					case 90:
+						Debug.Log ("CornerUpLeft " + i + "" + j);
+						SetUpWayPoint (go, i, j);
+						SetLeftWayPoint (go, i, j);
 						break;
-					case "180":
-						foreach (GameObject go in gameObjects) {
-							if (FindSide ("up", go, xPos, zPos))
-								up = go;
-							if (FindSide ("right", go, xPos, zPos))
-								right = go;
-						}
-						wp.upWaypoint = up.GetComponent<WayPoint> ();
-						wp.rightWaypoint = right.GetComponent<WayPoint> ();
+					case 180:
+						Debug.Log ("CornerUpRight " + i + "" + j);
+						SetUpWayPoint (go, i, j);
+						SetRightWayPoint (go, i, j);
 						break;
-					case "270":
-						foreach (GameObject go in gameObjects) {
-							if (FindSide ("down", go, xPos, zPos))
-								down = go;
-							if (FindSide ("right", go, xPos, zPos))
-								right = go;
-						}
-						wp.downWaypoint = down.GetComponent<WayPoint> ();
-						wp.rightWaypoint = right.GetComponent<WayPoint> ();
+					case 270:
+						Debug.Log ("CornerDownRight " + i + "" + j);
+						SetDownWayPoint (go, i, j);
+						SetRightWayPoint (go, i, j);
 						break;
 					default:
-						foreach (GameObject go in gameObjects) {
-							if (FindSide ("down", go, xPos, zPos))
-								down = go;
-							if (FindSide ("left", go, xPos, zPos))
-								left = go;
-						}
-						wp.downWaypoint = down.GetComponent<WayPoint> ();
-						wp.leftWaypoint = left.GetComponent<WayPoint> ();
+						Debug.Log ("CornerDownLeft " + i + "" + j);
+						SetDownWayPoint (go, i, j);
+						SetLeftWayPoint (go, i, j);
 						break;
 					}
 					break;
 				case "DeadEnd":
-					switch (rot) {
-					case "90":
-						foreach (GameObject go in gameObjects)
-							if (FindSide ("left", go, xPos, zPos))
-								left = go;
-						wp.leftWaypoint = left.GetComponent<WayPoint> ();
+					switch ((int)go.transform.rotation.eulerAngles.y) {
+					case 90:
+						Debug.Log ("DeadEndLeft " + i + "" + j);
+						SetLeftWayPoint (go, i, j);
 						break;
-					case "180":
-						foreach (GameObject go in gameObjects)
-							if (FindSide ("up", go, xPos, zPos))
-								up = go;
-						wp.upWaypoint = up.GetComponent<WayPoint> ();
+					case 180:
+						Debug.Log ("DeadEndUp " + i + "" + j);
+						SetUpWayPoint (go, i, j);
 						break;
-					case "270":
-						foreach (GameObject go in gameObjects)
-							if (FindSide ("right", go, xPos, zPos))
-								right = go;
-						wp.rightWaypoint = right.GetComponent<WayPoint> ();
+					case 270:
+						Debug.Log ("DeadEndRight " + i + "" + j);
+						SetRightWayPoint (go, i, j);
 						break;
 					default:
-						foreach (GameObject go in gameObjects)
-							if (FindSide ("down", go, xPos, zPos))
-								down = go;
-						wp.downWaypoint = down.GetComponent<WayPoint> ();
+						Debug.Log ("DeadEndDown " + i + "" + j);
+						SetDownWayPoint (go, i, j);
 						break;
 					}
+					break;
+				default:
 					break;
 				}
 			}
@@ -561,6 +490,28 @@ public class Parser : MonoBehaviour {
 			break;
 		}
 		return direction;
+	}
+
+	void SetUpWayPoint(GameObject go, int zPos, int xPos) {
+		go.GetComponent<WayPoint> ().upWaypoint = gameObjects [zPos - 1] [xPos].GetComponent<WayPoint> ();
+	}
+
+	void SetDownWayPoint(GameObject go, int zPos, int xPos) {
+		go.GetComponent<WayPoint> ().downWaypoint = gameObjects [zPos + 1] [xPos].GetComponent<WayPoint> ();
+	}
+		
+	void SetLeftWayPoint(GameObject go, int zPos, int xPos) {
+		go.GetComponent<WayPoint> ().leftWaypoint = gameObjects [zPos] [xPos - 1].GetComponent<WayPoint> ();
+	}
+
+	void SetRightWayPoint(GameObject go, int zPos, int xPos) {
+		go.GetComponent<WayPoint> ().rightWaypoint = gameObjects [zPos] [xPos + 1].GetComponent<WayPoint> ();
+	}
+
+	List<GameObject> GetEntities () {
+		for (int i = endLine + 1; i < lines.Count; i++) {
+			
+		}
 	}
 
 }
