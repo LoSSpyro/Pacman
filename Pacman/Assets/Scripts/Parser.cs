@@ -11,6 +11,7 @@ public class Parser : MonoBehaviour {
 	public GameObject inputFieldObject;
 	private InputField inputField;
 
+	public GameObject block;
 	public GameObject corner;
 	public GameObject corridor;
 	public GameObject cross;
@@ -29,6 +30,7 @@ public class Parser : MonoBehaviour {
 	private int endLine;
 	private int lineLength;
 
+	private int blockCounter = 0;
 	private int corridorCounter = 0;
 	private int crossCounter = 0;
 	private int tCrossCounter = 0;
@@ -87,10 +89,16 @@ public class Parser : MonoBehaviour {
 						lineGameObjects.Add (corridorV);
 						break;
 					case 1:
-						GameObject deadEnd0 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd")));
+						GameObject deadEnd0 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd|")));
 						deadEndCounter++;
 						deadEnd0.name = "DeadEnd " + deadEndCounter;
 						lineGameObjects.Add (deadEnd0);
+						break;
+					case 0:
+						GameObject block0 = (GameObject)Instantiate (block, getPosition (i, j), Quaternion.identity);
+						blockCounter++;
+						block0.name = "Block " + blockCounter;
+						lineGameObjects.Add (block0);
 						break;
 					}
 					break;
@@ -103,10 +111,16 @@ public class Parser : MonoBehaviour {
 						lineGameObjects.Add (corridorH);
 						break;
 					case 1:
-						GameObject deadEnd0 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd")));
+						GameObject deadEnd1 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd-")));
 						deadEndCounter++;
-						deadEnd0.name = "DeadEnd " + deadEndCounter;
-						lineGameObjects.Add (deadEnd0);
+						deadEnd1.name = "DeadEnd " + deadEndCounter;
+						lineGameObjects.Add (deadEnd1);
+						break;
+					case 0:
+						GameObject block1 = (GameObject)Instantiate (block, getPosition (i, j), Quaternion.identity);
+						blockCounter++;
+						block1.name = "Block " + blockCounter;
+						lineGameObjects.Add (block1);
 						break;
 					}
 					break;
@@ -125,18 +139,38 @@ public class Parser : MonoBehaviour {
 						lineGameObjects.Add (tCross0);
 						break;
 					case 2:
-						GameObject corner0 = (GameObject)Instantiate (corner, getPosition (i, j), getRotation (GetDirection (i, j, "Corner")));
-						cornerCounter++;
-						corner0.name = "Corner " + cornerCounter;
-						lineGameObjects.Add (corner0);
+						switch (GetKind (i, j)) {
+						case "Corner":
+							GameObject corner0 = (GameObject)Instantiate (corner, getPosition (i, j), getRotation (GetDirection (i, j, "Corner")));
+							cornerCounter++;
+							corner0.name = "Corner " + cornerCounter;
+							lineGameObjects.Add (corner0);
+							break;
+						case "CorridorV":
+							GameObject corridorV0 = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorV"));
+							corridorCounter++;
+							corridorV0.name = "Corridor " + corridorCounter;
+							lineGameObjects.Add (corridorV0);
+							break;
+						case "CorridorH":
+							GameObject corridorH0 = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorH"));
+							corridorCounter++;
+							corridorH0.name = "Corridor " + corridorCounter;
+							lineGameObjects.Add (corridorH0);
+							break;
+						}
 						break;
 					case 1:
-						GameObject deadEnd1 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd")));
+						GameObject deadEnd2 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd+")));
 						deadEndCounter++;
-						deadEnd1.name = "DeadEnd " + deadEndCounter;
-						lineGameObjects.Add (deadEnd1);
+						deadEnd2.name = "DeadEnd " + deadEndCounter;
+						lineGameObjects.Add (deadEnd2);
 						break;
-					default:
+					case 0:
+						GameObject block0 = (GameObject)Instantiate (block, getPosition (i, j), Quaternion.identity);
+						blockCounter++;
+						block0.name = "Block " + blockCounter;
+						lineGameObjects.Add (block0);
 						break;
 					}
 					break;
@@ -296,51 +330,72 @@ public class Parser : MonoBehaviour {
 			else if (("" + lines [zPos + 1] [xPos]).Equals ("-"))
 				endstring += "down" + SecondPort (zPos, xPos);
 			break;
-		case "DeadEnd":
+		case "DeadEnd+":
 			if (zPos > 0 && zPos < endLine && xPos > 0 && xPos < lineLength) {
 				if (("" + lines [zPos + 1] [xPos]).Equals ("|") || ("" + lines [zPos + 1] [xPos]).Equals ("+"))
-					return type + "down";
+					return "DeadEnddown";
 				if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
-					return type + "up";
+					return "DeadEndup";
 				if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
-					return type + "right";
+					return "DeadEndright";
 				if (("" + lines [zPos] [xPos - 1]).Equals ("-") || ("" + lines [zPos] [xPos - 1]).Equals ("+"))
-					return type + "left";
+					return "DeadEndleft";
 			} else if (zPos == 0 || zPos == endLine) {
 				if (zPos == 0) {
 					if (("" + lines [zPos + 1] [xPos]).Equals ("|") || ("" + lines [zPos + 1] [xPos]).Equals ("+"))
-						return type + "down";
+						return "DeadEnddown";
 				}
 				if (zPos == endLine) {
 					if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
-						return type + "up";
+						return "DeadEndup";
 				}
 				if (xPos == 0)
-					return type + "right";
+					return "DeadEndright";
 				if (xPos == lineLength)
-					return type + "left";
+					return "DeadEndleft";
 				if (xPos > 0 && xPos < lineLength) {
-					if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
-						return type + "right";
+					if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+")) {
+						return "DeadEndright";
+					}
 					else
-						return type + "left";
+						return "DeadEndleft";
 				}
 			} else if (xPos == 0 || xPos == lineLength) {
 				if (xPos == 0) {
 					if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
-						return type + "right";
+						return "DeadEndright";
 				}
 				if (xPos == lineLength) {
 					if (("" + lines [zPos] [xPos - 1]).Equals ("-") || ("" + lines [zPos] [xPos - 1]).Equals ("+"))
-						return type + "left";
+						return "DeadEndleft";
 				}
 				if (zPos > 0 && zPos < endLine) {
 					if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
-						return type + "up";
+						return "DeadEndup";
 					else
-						return type + "down";
+						return "DeadEnddown";
 				}
 			}
+			break;
+		case "DeadEnd|":
+			if (zPos == 0)
+				return "DeadEnddown";
+			else if (("" + lines [zPos - 1] [xPos]).Equals ("-"))
+				return "DeadEnddown";
+			else if (zPos == endLine)
+				return "DeadEndup";
+			else if (("" + lines [zPos + 1] [xPos]).Equals ("-"))
+				return "DeadEndup";
+			break;
+		case "DeadEnd-":
+			if (xPos == 0)
+				return "DeadEndright";
+			else if (("" + lines [zPos] [xPos - 1]).Equals ("|"))
+				return "DeadEndright";
+			else if (xPos == lineLength)
+				return "DeadEndleft";
+			else if (("" + lines [zPos] [xPos + 1]).Equals ("|"))
+				return "DeadEndleft";
 			break;
 		}
 		return endstring;
@@ -528,6 +583,26 @@ public class Parser : MonoBehaviour {
 			}
 		}
 		return entities;
+	}
+
+	string GetKind(int zPos, int xPos) {
+		bool corridorV = true;
+		bool corridorH = true;
+		if (xPos == 0 || xPos == lineLength)
+			corridorH = false;
+		if (zPos == 0 || zPos == endLine)
+			corridorV = false;
+		if (corridorH && (("" + lines [zPos] [xPos - 1]).Equals ("|") || ("" + lines [zPos] [xPos + 1]).Equals ("|")))
+			corridorH = false;
+		if (corridorV && (("" + lines [zPos - 1] [xPos]).Equals ("-") || ("" + lines [zPos + 1] [xPos]).Equals ("-")))
+			corridorV = false;
+		if (corridorH)
+			return "CorridorH";
+		else if (corridorV)
+			return "CorridorV";
+		else
+			return "Corner";
+			
 	}
 
 }

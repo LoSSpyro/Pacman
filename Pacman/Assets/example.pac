@@ -1,7 +1,10 @@
-+-|------+
+-|||||||||
 +--------+
-Pacman 0 0
-Blinky 2 1
-Inky 8 0
-Pinky 8 1
-Clyde 9 1
++---+----+
++-|-+|+-|+
+++---|-+--
+Pacman 0 1
+Blinky 4 3
+Inky 8 1
+Pinky 8 2
+Clyde 9 2
