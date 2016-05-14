@@ -6,10 +6,89 @@ using System.Text;
 using System;
 using System.Collections.Generic;
 
-public class Parser : MonoBehaviour {
+public class Tile {
+	public bool UpWall { get; set; }
+	public bool DownWall { get; set; }
+	public bool LeftWall { get; set; }
+	public bool RightWall { get; set; }
+	public GameObject type { get; set; }
+	public Vector3 position { get; set; }
+	public Quaternion rotation { get; set; }
 
-	public GameObject inputFieldObject;
-	private InputField inputField;
+	private int wallCount;
+
+	public Tile() {
+		wallCount = 0;
+		UpWall = false;
+		DownWall = false;
+		LeftWall = false;
+		RightWall = false;
+		type = null;
+		position = Vector3.zero;
+		rotation = Quaternion.identity;
+	}
+	public Tile(int zPos, int xPos, bool up, bool down, bool left, bool right, List<GameObject> typeList) {
+		wallCount = 0;
+		if (up)
+			wallCount++;
+		if (down)
+			wallCount++;
+		if (left)
+			wallCount++;
+		if (right)
+			wallCount++;
+		if ((up && down) || (left && right))
+			wallCount++;
+		UpWall = up;
+		DownWall = down;
+		LeftWall = left;
+		RightWall = right;
+		type = typeList [wallCount];
+		position = new Vector3 (xPos, 0f, -zPos);
+		rotation = GetRotation ();
+	}
+		
+	private Quaternion GetRotation () {
+		switch (type.name) {
+		case "TCross":
+			if (LeftWall)
+				return Quaternion.identity;
+			else if (UpWall)
+				return Quaternion.Euler (0f, 90f, 0f);
+			else if (RightWall)
+				return Quaternion.Euler (0f, 180f, 0f);
+			else
+				return Quaternion.Euler (0f, 270f, 0f);
+		case "Corner":
+			if (UpWall && RightWall)
+				return Quaternion.identity;
+			else if (DownWall && RightWall)
+				return Quaternion.Euler (0f, 90f, 0f);
+			else if (DownWall && LeftWall)
+				return Quaternion.Euler (0f, 180f, 0f);
+			else
+				return Quaternion.Euler (0f, 270f, 0f);
+		case "Corridor":
+			if (LeftWall && RightWall)
+				return Quaternion.identity;
+			else
+				return Quaternion.Euler (0f, 90f, 0f);
+		case "DeadEnd":
+			if (!DownWall)
+				return Quaternion.identity;
+			else if (!LeftWall)
+				return Quaternion.Euler (0f, 90f, 0f);
+			else if (!UpWall)
+				return Quaternion.Euler (0f, 180f, 0f);
+			else
+				return Quaternion.Euler (0f, 270f, 0f);
+		default:
+			return Quaternion.identity;
+		}
+	}
+}
+
+public class Parser : MonoBehaviour {
 
 	public GameObject block;
 	public GameObject corner;
@@ -24,31 +103,36 @@ public class Parser : MonoBehaviour {
 	public GameObject pinky;
 	public GameObject clyde;
 
-	private List<string> lines = new List<string> ();
-	private List<List<GameObject>> gameObjects = new List<List<GameObject>> ();
-
-	private int endLine;
-	private int lineLength;
-
 	private int blockCounter = 0;
 	private int corridorCounter = 0;
 	private int crossCounter = 0;
 	private int tCrossCounter = 0;
 	private int cornerCounter = 0;
 	private int deadEndCounter = 0;
-	
 
+	private List<string> lines = new List<string> ();
+
+	private List<List<Tile>> tiles = new List<List<Tile>>();
+	private List<GameObject> types = new List<GameObject> ();
+
+	private List<List<GameObject>> gameObjects = new List<List<GameObject>> ();
+
+	private int endLine = 0;
+	private int lineLength = 0;
+
+	// Use this for initialization
 	void Start () {
-		inputField = inputFieldObject.GetComponent<InputField> ();
-		inputField.onEndEdit.AddListener (getField);
+		types.Add (cross);
+		types.Add (tCross);
+		types.Add (corner);
+		types.Add (corridor);
+		types.Add (deadEnd);
+		types.Add (block);
 	}
-
-
-	public void getField (string text) {
-		if (ParseFile (text)) {
-			makeField (lines);
-			inputFieldObject.SetActive (false);
-		}
+	
+	public void getField (List<string> file) {
+		lines = file;
+		makeField ();
 	}
 
 	bool ParseFile (string filename) {
@@ -72,537 +156,173 @@ public class Parser : MonoBehaviour {
 		}
 	}
 
-	void makeField (List<string> lines) {
-		GetEndLine ();
+	public void makeField() {
+		GetLineParameters ();
 		for (int i = 0; i < lines.Count; i++) {
+			List<Tile> lineTiles = new List<Tile> ();
 			string line = lines [i];
-			List <GameObject> lineGameObjects = new List<GameObject> ();
 			for (int j = 0; j < line.Length; j++) {
-				string c = "" + line [j];
-				switch (c) {
+				string symbol = "" + line [j];
+				switch (symbol) {
 				case "|":
-					switch (Openings ("|", i, j)) {
-					case 2:
-						GameObject corridorV = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorV"));
-						corridorCounter++;
-						corridorV.name = "Corridor " + corridorCounter;
-						lineGameObjects.Add (corridorV);
-						break;
-					case 1:
-						GameObject deadEnd0 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd|")));
-						deadEndCounter++;
-						deadEnd0.name = "DeadEnd " + deadEndCounter;
-						lineGameObjects.Add (deadEnd0);
-						break;
-					case 0:
-						GameObject block0 = (GameObject)Instantiate (block, getPosition (i, j), Quaternion.identity);
-						blockCounter++;
-						block0.name = "Block " + blockCounter;
-						lineGameObjects.Add (block0);
-						break;
-					}
+					lineTiles.Add(new Tile(i, j, CheckUp(i, j), CheckDown(i, j), true, true, types));
 					break;
 				case "-":
-					switch (Openings ("-", i, j)) {
-					case 2:
-						GameObject corridorH = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorH"));
-						corridorCounter++;
-						corridorH.name = "Corridor " + corridorCounter;
-						lineGameObjects.Add (corridorH);
-						break;
-					case 1:
-						GameObject deadEnd1 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd-")));
-						deadEndCounter++;
-						deadEnd1.name = "DeadEnd " + deadEndCounter;
-						lineGameObjects.Add (deadEnd1);
-						break;
-					case 0:
-						GameObject block1 = (GameObject)Instantiate (block, getPosition (i, j), Quaternion.identity);
-						blockCounter++;
-						block1.name = "Block " + blockCounter;
-						lineGameObjects.Add (block1);
-						break;
-					}
+					lineTiles.Add(new Tile(i, j, true, true, CheckLeft(i, j), CheckRight(i,j), types));
 					break;
 				case "+":
-					switch (Openings ("+", i, j)) {
-					case 4:
-						GameObject cross0 = (GameObject)Instantiate (cross, getPosition (i, j), getRotation ("Cross"));
-						crossCounter++;
-						cross0.name = "Cross " + crossCounter;
-						lineGameObjects.Add (cross0);
-						break;
-					case 3:
-						GameObject tCross0 = (GameObject)Instantiate (tCross, getPosition (i, j), getRotation (GetDirection (i, j, "TCross")));
-						tCrossCounter++;
-						tCross0.name = "TCross " + tCrossCounter;
-						lineGameObjects.Add (tCross0);
-						break;
-					case 2:
-						switch (GetKind (i, j)) {
-						case "Corner":
-							GameObject corner0 = (GameObject)Instantiate (corner, getPosition (i, j), getRotation (GetDirection (i, j, "Corner")));
-							cornerCounter++;
-							corner0.name = "Corner " + cornerCounter;
-							lineGameObjects.Add (corner0);
-							break;
-						case "CorridorV":
-							GameObject corridorV0 = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorV"));
-							corridorCounter++;
-							corridorV0.name = "Corridor " + corridorCounter;
-							lineGameObjects.Add (corridorV0);
-							break;
-						case "CorridorH":
-							GameObject corridorH0 = (GameObject)Instantiate (corridor, getPosition (i, j), getRotation ("CorridorH"));
-							corridorCounter++;
-							corridorH0.name = "Corridor " + corridorCounter;
-							lineGameObjects.Add (corridorH0);
-							break;
-						}
-						break;
-					case 1:
-						GameObject deadEnd2 = (GameObject)Instantiate (deadEnd, getPosition (i, j), getRotation (GetDirection (i, j, "DeadEnd+")));
-						deadEndCounter++;
-						deadEnd2.name = "DeadEnd " + deadEndCounter;
-						lineGameObjects.Add (deadEnd2);
-						break;
-					case 0:
-						GameObject block0 = (GameObject)Instantiate (block, getPosition (i, j), Quaternion.identity);
-						blockCounter++;
-						block0.name = "Block " + blockCounter;
-						lineGameObjects.Add (block0);
-						break;
-					}
+					lineTiles.Add(new Tile(i, j, CheckUp(i,j), CheckDown(i,j), CheckLeft(i,j), CheckRight(i,j), types));
 					break;
 				default:
 					break;
-     				}
-			
+				}
 			}
-			gameObjects.Add(lineGameObjects);
+			tiles.Add (lineTiles);
 		}
-		SetWayPoints ();			
-		gameObjects.Add (GetEntities());
+		CreateGameObjects ();
+		SetWayPoints ();
+		CreateEntities ();
 	}
 
-	void GetEndLine () {
-		for (int i = 0; i < lines.Count; i++) {
-			string line = lines [i];
-			if (!(line.Contains ("+") || line.Contains ("|") || line.Contains ("-"))) {
-				endLine = i-1;
-				lineLength = line.Length - 1;
+	bool CheckUp (int zPos, int xPos) {
+		if (zPos == 0)
+			return true;
+		else if ((lines [zPos - 1] [xPos] + "").Equals ("-"))
+			return true;
+		else
+			return false;
+	}
+
+	bool CheckDown (int zPos, int xPos) {
+		if (zPos == endLine)
+			return true;
+		else if ((lines [zPos + 1] [xPos] + "").Equals ("-"))
+			return true;
+		else
+			return false;
+	}
+
+	bool CheckLeft (int zPos, int xPos) {
+		if (xPos == 0)
+			return true;
+		else if ((lines [zPos] [xPos - 1] + "").Equals ("|"))
+			return true;
+		else
+			return false;
+	}
+
+	bool CheckRight (int zPos, int xPos) {
+		if (xPos == lineLength)
+			return true;
+		else if ((lines [zPos] [xPos + 1] + "").Equals ("|"))
+			return true;
+		else
+			return false;
+	}
+
+	void GetLineParameters() {
+		lineLength = lines [0].Length - 1;
+		foreach (string line in lines) {
+			if (!(line.Contains ("+") || line.Contains ("-") || line.Contains ("|")))
+				break;
+			else
+				endLine++;
+		}
+		endLine--;
+	}
+
+	void CreateGameObjects () {
+		foreach (List<Tile> tileList in tiles) {
+			List<GameObject> lineGameObjects = new List<GameObject> ();
+			foreach (Tile tile in tileList) {
+				GameObject temp = (GameObject)Instantiate (tile.type, tile.position, tile.rotation);
+				temp.name = tile.type.name + " " + IncreaseCounter (tile.type.name);
+				lineGameObjects.Add (temp);
+			}
+			gameObjects.Add (lineGameObjects);
+		}
+	}
+
+	int IncreaseCounter (string name) {
+		switch (name) {
+		case "Cross":
+			return crossCounter++;
+		case "TCross":
+			return tCrossCounter++;
+		case "Corner":
+			return cornerCounter++;
+		case "Corridor":
+			return corridorCounter++;
+		case "DeadEnd":
+			return deadEndCounter++;
+		case "Tile":
+			return blockCounter++;
+		default:
+			return 0;
+		}
+	}
+
+	void SetWayPoints() {
+		for (int i = 0; i < tiles.Count; i++) {
+			for (int j = 0; j < tiles [i].Count; j++) {
+				GameObject tempGameObject = gameObjects [i] [j];
+				Tile tile = tiles [i] [j];
+				if (!tile.UpWall)
+					tempGameObject.GetComponent<WayPoint>().upWaypoint = gameObjects [i - 1] [j].GetComponent<WayPoint> ();
+				if(!tile.DownWall)
+					tempGameObject.GetComponent<WayPoint>().downWaypoint = gameObjects [i + 1] [j].GetComponent<WayPoint> ();
+				if (!tile.LeftWall)
+					tempGameObject.GetComponent<WayPoint>().leftWaypoint = gameObjects [i] [j - 1].GetComponent<WayPoint> ();
+				if(!tile.RightWall)
+					tempGameObject.GetComponent<WayPoint>().rightWaypoint = gameObjects [i] [j + 1].GetComponent<WayPoint> ();
+			}
+		}
+	}
+
+	void CreateEntities () {
+		for (int i = endLine + 1; i < lines.Count; i++) {
+			Vector2 spawn = GetSpawnPosition (lines[i]);
+			int xPos = (int)spawn.x;
+			int zPos = (int)spawn.y;
+			if (tiles [zPos] [xPos].type == block) {
+				Debug.LogError ("Can not spawn in DeathPath");
 				break;
 			}
-		}
-	}
-
-	Vector3 getPosition(float z, float x) {
-		return new Vector3 (x, 0f, -z);
-	}
-
-	Quaternion getRotation(string type) {
-		Quaternion rot;
-		switch (type) {
-		case ("CorridorH"):
-			rot = Quaternion.Euler (0, 90, 0);
-			break;
-		case ("TCrossup"):
-			rot = Quaternion.Euler (0, 90, 0);
-			break;
-		case ("Cornerdownright"):
-			rot = Quaternion.Euler (0, 90, 0);
-			break;
-		case ("DeadEndleft"):
-			rot = Quaternion.Euler (0, 90, 0);
-			break;
-		case "TCrossright":
-			rot = Quaternion.Euler (0, 180, 0);
-			break;
-		case "Cornerdownleft":
-			rot = Quaternion.Euler (0, 180, 0);
-			break;
-		case "DeadEndup":
-			rot = Quaternion.Euler (0, 180, 0);
-			break;
-		case "TCrossdown":
-			rot = Quaternion.Euler (0, 270, 0);
-			break;
-		case "Cornerupleft":
-			rot = Quaternion.Euler (0, 270, 0);
-			break;
-		case "DeadEndright":
-			rot = Quaternion.Euler (0, 270, 0);
-			break;
-		default:
-			rot = Quaternion.identity;
-			break;
-		}
-		return rot;
-	}
-
-	int Openings(string type, int zPos, int xPos) {
-		int ports = 0;
-		switch (type) {
-		case "+":
-			ports = 4;
-			if (zPos == 0) {
-				ports--;
-			} else if (("" + lines [zPos - 1] [xPos]).Equals ("-")) {
-				ports--;
-			}
-			if (zPos == endLine) {
-				ports--;
-			} else if (zPos < endLine) {
-				if (("" + lines [zPos + 1] [xPos]).Equals ("-")) {
-					ports--;
-				}
-			}
-			if (xPos == 0) {
-				ports--;
-			} else if (("" + lines [zPos] [xPos - 1]).Equals ("|")) {
-				ports--;
-			}
-			if (xPos == lineLength) {
-				ports--;
-			} else if (("" + lines [zPos] [xPos + 1]).Equals ("|")) {
-				ports--;
-			}
-			break;
-		case "|":
-			ports = 2;
-			if (zPos == 0) {
-				ports--;
-			} else if (("" + lines [zPos - 1] [xPos]).Equals ("-")) {
-				ports--;
-			}
-			if (zPos == endLine) {
-				ports--;
-			} else if (zPos < endLine) {
-				if (("" + lines [zPos + 1] [xPos]).Equals ("-")) {
-					ports--;
-				}
-			}
-			break;
-		case "-":
-			ports = 2;
-			if (xPos == 0) {
-				ports--;
-			} else if (("" + lines [zPos] [xPos - 1]).Equals ("|")) {
-				ports--;
-			}
-			if (xPos == lineLength) {
-				ports--;
-			} else if (("" + lines [zPos] [xPos + 1]).Equals ("|")) {
-				ports--;
-			}
-			break;
-		}
-		return ports;
-	}
-
-	string GetDirection(int zPos, int xPos, string type) {
-		string endstring = type;
-		switch(type) {
-		case "TCross":
-			if (zPos == 0)
-				return type + "up";
-			else if (zPos == endLine)
-				return type + "down";
-			else if (xPos == 0)
-				return type + "left";
-			else if (xPos == lineLength)
-				return type + "right";
-			else if (("" + lines [zPos - 1] [xPos]).Equals ("-"))
-				return type + "up";
-			else if (("" + lines [zPos + 1] [xPos]).Equals ("-"))
-				return type + "down";
-			else if (("" + lines [zPos] [xPos - 1]).Equals ("|"))
-				return type + "left";
-			else
-				return type + "right";
-		case ("Corner"):
-			if (zPos == 0)
-				endstring += "up" + SecondPort (zPos, xPos);
-			else if (("" + lines [zPos - 1] [xPos]).Equals ("-"))
-				endstring += "up" + SecondPort (zPos, xPos);
-			else if (zPos == endLine)
-				endstring += "down" + SecondPort (zPos, xPos);
-			else if (("" + lines [zPos + 1] [xPos]).Equals ("-"))
-				endstring += "down" + SecondPort (zPos, xPos);
-			break;
-		case "DeadEnd+":
-			if (zPos > 0 && zPos < endLine && xPos > 0 && xPos < lineLength) {
-				if (("" + lines [zPos + 1] [xPos]).Equals ("|") || ("" + lines [zPos + 1] [xPos]).Equals ("+"))
-					return "DeadEnddown";
-				if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
-					return "DeadEndup";
-				if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
-					return "DeadEndright";
-				if (("" + lines [zPos] [xPos - 1]).Equals ("-") || ("" + lines [zPos] [xPos - 1]).Equals ("+"))
-					return "DeadEndleft";
-			} else if (zPos == 0 || zPos == endLine) {
-				if (zPos == 0) {
-					if (("" + lines [zPos + 1] [xPos]).Equals ("|") || ("" + lines [zPos + 1] [xPos]).Equals ("+"))
-						return "DeadEnddown";
-				}
-				if (zPos == endLine) {
-					if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
-						return "DeadEndup";
-				}
-				if (xPos == 0)
-					return "DeadEndright";
-				if (xPos == lineLength)
-					return "DeadEndleft";
-				if (xPos > 0 && xPos < lineLength) {
-					if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+")) {
-						return "DeadEndright";
-					}
-					else
-						return "DeadEndleft";
-				}
-			} else if (xPos == 0 || xPos == lineLength) {
-				if (xPos == 0) {
-					if (("" + lines [zPos] [xPos + 1]).Equals ("-") || ("" + lines [zPos] [xPos + 1]).Equals ("+"))
-						return "DeadEndright";
-				}
-				if (xPos == lineLength) {
-					if (("" + lines [zPos] [xPos - 1]).Equals ("-") || ("" + lines [zPos] [xPos - 1]).Equals ("+"))
-						return "DeadEndleft";
-				}
-				if (zPos > 0 && zPos < endLine) {
-					if (("" + lines [zPos - 1] [xPos]).Equals ("|") || ("" + lines [zPos - 1] [xPos]).Equals ("+"))
-						return "DeadEndup";
-					else
-						return "DeadEnddown";
-				}
-			}
-			break;
-		case "DeadEnd|":
-			if (zPos == 0)
-				return "DeadEnddown";
-			else if (("" + lines [zPos - 1] [xPos]).Equals ("-"))
-				return "DeadEnddown";
-			else if (zPos == endLine)
-				return "DeadEndup";
-			else if (("" + lines [zPos + 1] [xPos]).Equals ("-"))
-				return "DeadEndup";
-			break;
-		case "DeadEnd-":
-			if (xPos == 0)
-				return "DeadEndright";
-			else if (("" + lines [zPos] [xPos - 1]).Equals ("|"))
-				return "DeadEndright";
-			else if (xPos == lineLength)
-				return "DeadEndleft";
-			else if (("" + lines [zPos] [xPos + 1]).Equals ("|"))
-				return "DeadEndleft";
-			break;
-		}
-		return endstring;
-	}
-
-	string SecondPort(int zPos, int xPos){
-		if (xPos == 0)
-			return "left";
-		else if (xPos == lineLength)
-			return "right";
-		else if (("" + lines [zPos] [xPos - 1]).Equals ("|"))
-			return "left";
-		else
-			return "right";
-		}
-
-	void SetWayPoints () {
-		for (int i = 0; i < gameObjects.Count; i++) {
-			List<GameObject> line = gameObjects [i];
-			for (int j = 0; j < line.Count; j++) {
-				GameObject go = line [j];
-				switch (GetName (go)) {
-				case "Corridor":
-					if ((int)go.transform.rotation.eulerAngles.y == 90) {
-						SetLeftWayPoint (go, i, j);
-						SetRightWayPoint (go, i, j);
-					} else {
-						SetUpWayPoint (go, i, j);
-						SetDownWayPoint(go, i, j);
-					}
-					break;
-				case "Cross":
-					SetUpWayPoint (go, i, j);
-					SetDownWayPoint (go, i, j);
-					SetLeftWayPoint (go, i, j);
-					SetRightWayPoint (go, i, j);
-					break;
-				case "TCross":
-					switch ((int)go.transform.rotation.eulerAngles.y) {
-					case 90:
-						SetDownWayPoint (go, i, j);
-						SetLeftWayPoint (go, i, j);
-						SetRightWayPoint (go, i, j);
-						break;
-					case 180:
-						SetUpWayPoint (go, i, j);
-						SetDownWayPoint (go, i, j);
-						SetLeftWayPoint (go, i, j);
-						break;
-					case 270:
-						SetUpWayPoint (go, i, j);
-						SetLeftWayPoint (go, i, j);
-						SetRightWayPoint (go, i, j);
-						break;
-					default:
-						SetUpWayPoint (go, i, j);
-						SetDownWayPoint (go, i, j);
-						SetRightWayPoint (go, i, j);
-						break;
-					}
-					break;
-				case "Corner":
-					switch ((int)go.transform.rotation.eulerAngles.y) {
-					case 90:
-						SetUpWayPoint (go, i, j);
-						SetLeftWayPoint (go, i, j);
-						break;
-					case 180:
-						SetUpWayPoint (go, i, j);
-						SetRightWayPoint (go, i, j);
-						break;
-					case 270:
-						SetDownWayPoint (go, i, j);
-						SetRightWayPoint (go, i, j);
-						break;
-					default:
-						SetDownWayPoint (go, i, j);
-						SetLeftWayPoint (go, i, j);
-						break;
-					}
-					break;
-				case "DeadEnd":
-					switch ((int)go.transform.rotation.eulerAngles.y) {
-					case 90:
-						SetLeftWayPoint (go, i, j);
-						break;
-					case 180:
-						SetUpWayPoint (go, i, j);
-						break;
-					case 270:
-						SetRightWayPoint (go, i, j);
-						break;
-					default:
-						SetDownWayPoint (go, i, j);
-						break;
-					}
-					break;
-				default:
-					break;
-				}
-			}
-		}
-	}
-
-	string GetName (GameObject go) {
-		string name = "";
-		if (go.name.Contains ("Corridor"))
-			name = "Corridor";
-		if (go.name.Contains ("Cross"))
-			name = "Cross";
-		if (go.name.Contains ("TCross"))
-			name = "TCross";
-		if (go.name.Contains ("Corner"))
-			name =  "Corner";
-		if (go.name.Contains ("DeadEnd"))
-			name = "DeadEnd";
-		return name;
-		
-  	}
-
-	void SetUpWayPoint(GameObject go, int zPos, int xPos) {
-		go.GetComponent<WayPoint> ().upWaypoint = gameObjects [zPos - 1] [xPos].GetComponent<WayPoint> ();
-	}
-
-	void SetDownWayPoint(GameObject go, int zPos, int xPos) {
-		go.GetComponent<WayPoint> ().downWaypoint = gameObjects [zPos + 1] [xPos].GetComponent<WayPoint> ();
-	}
-		
-	void SetLeftWayPoint(GameObject go, int zPos, int xPos) {
-		go.GetComponent<WayPoint> ().leftWaypoint = gameObjects [zPos] [xPos - 1].GetComponent<WayPoint> ();
-	}
-
-	void SetRightWayPoint(GameObject go, int zPos, int xPos) {
-		go.GetComponent<WayPoint> ().rightWaypoint = gameObjects [zPos] [xPos + 1].GetComponent<WayPoint> ();
-	}
-
-	List<GameObject> GetEntities () {
-		List<GameObject> entities = new List<GameObject> ();
-		for (int i = endLine + 1; i < lines.Count; i++) {
-			int xPos;
-			int zPos;
 			if (lines[i].Contains ("Pacman")) {
-				xPos = int.Parse ("" + lines[i] [7]);
-				zPos = int.Parse ("" + lines[i] [9]);
-				GameObject pacman0 = (GameObject)Instantiate (pacman, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
-				pacman0.name = "Pacman";
-				pacman0.transform.localScale = Vector3.one * 0.45f;
-				entities.Add (pacman0);
+				GameObject tempPacman = (GameObject)Instantiate (pacman, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
+				tempPacman.name = "Pacman";
+				tempPacman.transform.localScale = Vector3.one * 0.45f;
 			}
 			if (lines[i].Contains ("Blinky")) {
-				xPos = int.Parse ("" + lines[i] [7]);
-				zPos = int.Parse ("" + lines[i] [9]);
-				GameObject blinky0 = (GameObject)Instantiate (blinky, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
-				blinky0.name = "Blinky";
-				blinky0.transform.localScale = Vector3.one * 0.45f;
-				blinky0.GetComponent<EnemyBehaviourScript> ().currentWaypoint = gameObjects [zPos] [xPos].GetComponent<WayPoint> ();
-				entities.Add (blinky0);
+				GameObject tempBlinky = (GameObject)Instantiate (blinky, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
+				tempBlinky.name = "Blinky";
+				tempBlinky.transform.localScale = Vector3.one * 0.45f;
+				tempBlinky.GetComponent<EnemyBehaviourScript> ().currentWaypoint = gameObjects [zPos] [xPos].GetComponent<WayPoint> ();
 			}
 			if (lines[i].Contains ("Inky")) {
-				xPos = int.Parse ("" + lines[i] [5]);
-				zPos = int.Parse ("" + lines[i] [7]);
-				GameObject inky0 = (GameObject)Instantiate (inky, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
-				inky0.name = "Inky";
-				inky0.transform.localScale = Vector3.one * 0.45f;
-				inky0.GetComponent<EnemyBehaviourScript> ().currentWaypoint = gameObjects [zPos] [xPos].GetComponent<WayPoint> ();
-				entities.Add (inky0);
+				GameObject tempInky = (GameObject)Instantiate (inky, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
+				tempInky.name = "Inky";
+				tempInky.transform.localScale = Vector3.one * 0.45f;
+				tempInky.GetComponent<EnemyBehaviourScript> ().currentWaypoint = gameObjects [zPos] [xPos].GetComponent<WayPoint> ();
 			}
 			if (lines[i].Contains ("Pinky")) {
-				xPos = int.Parse ("" + lines[i] [6]);
-				zPos = int.Parse ("" + lines[i] [8]);
-				GameObject pinky0 = (GameObject)Instantiate (pinky, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
-				pinky0.name = "Pinky";
-				pinky0.transform.localScale = Vector3.one * 0.45f;
-				pinky0.GetComponent<EnemyBehaviourScript> ().currentWaypoint = gameObjects [zPos] [xPos].GetComponent<WayPoint> ();
-				entities.Add (pinky0);
+				GameObject tempPinky = (GameObject)Instantiate (pinky, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
+				tempPinky.name = "Pinky";
+				tempPinky.transform.localScale = Vector3.one * 0.45f;
+				tempPinky.GetComponent<EnemyBehaviourScript> ().currentWaypoint = gameObjects [zPos] [xPos].GetComponent<WayPoint> ();
 			}
 			if (lines[i].Contains ("Clyde")) {
-				xPos = int.Parse ("" + lines[i] [6]);
-				zPos = int.Parse ("" + lines[i] [8]);
-				GameObject clyde0 = (GameObject)Instantiate (clyde, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
-				clyde0.name = "Clyde";
-				clyde0.transform.localScale = Vector3.one * 0.45f;
-				clyde0.GetComponent<EnemyBehaviourScript> ().currentWaypoint = gameObjects [zPos] [xPos].GetComponent<WayPoint> ();
-				entities.Add (clyde0);
+				GameObject tempClyde = (GameObject)Instantiate (clyde, new Vector3 (xPos, 0f, -zPos), Quaternion.identity);
+				tempClyde.name = "Clyde";
+				tempClyde.transform.localScale = Vector3.one * 0.45f;
+				tempClyde.GetComponent<EnemyBehaviourScript> ().currentWaypoint = gameObjects [zPos] [xPos].GetComponent<WayPoint> ();
 			}
 		}
-		return entities;
 	}
 
-	string GetKind(int zPos, int xPos) {
-		bool corridorV = true;
-		bool corridorH = true;
-		if (xPos == 0 || xPos == lineLength)
-			corridorH = false;
-		if (zPos == 0 || zPos == endLine)
-			corridorV = false;
-		if (corridorH && (("" + lines [zPos] [xPos - 1]).Equals ("|") || ("" + lines [zPos] [xPos + 1]).Equals ("|")))
-			corridorH = false;
-		if (corridorV && (("" + lines [zPos - 1] [xPos]).Equals ("-") || ("" + lines [zPos + 1] [xPos]).Equals ("-")))
-			corridorV = false;
-		if (corridorH)
-			return "CorridorH";
-		else if (corridorV)
-			return "CorridorV";
-		else
-			return "Corner";
-			
+	Vector2 GetSpawnPosition(string line) {
+		string[] s = line.Split (' ');
+		return (new Vector2 (float.Parse (s [1]), float.Parse (s [2])));
 	}
 
 }

@@ -1,10 +1,22 @@
 fileFormatVersion: 2
-guid: b632fb24191084c6a8a1356c0a69a40b
-timeCreated: 1462882102
+guid: 084ff76449851b043ba48200754ed5ea
+timeCreated: 1463226539
 licenseType: Free
 MonoImporter:
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - inputFieldObject: {instanceID: 0}
+  - block: {fileID: 100002, guid: 8ebab725a88b12f49ba38210e6e9fc55, type: 2}
+  - corner: {fileID: 109970, guid: e80efea6cd0e1af4c90944f7f8e68c8a, type: 2}
+  - corridor: {fileID: 167196, guid: 2c1e117fef28b444c91994e59d7166a0, type: 2}
+  - cross: {fileID: 164358, guid: 094d9681b997e9c408cfb0e053798635, type: 2}
+  - deadEnd: {fileID: 110460, guid: 0bb98067d4e35ef4eb8d9da0dbee101a, type: 2}
+  - tCross: {fileID: 113768, guid: 536ec17f9e3070043af467b5f60018b1, type: 2}
+  - pacman: {fileID: 100000, guid: 96f2f23595eb90c45bb70378f6c5246c, type: 2}
+  - blinky: {fileID: 152492, guid: b48c8c68b8aeefd43a1d2dc2b3801375, type: 2}
+  - inky: {fileID: 171106, guid: 6e6490e51321608408657d88edb911e1, type: 2}
+  - pinky: {fileID: 126958, guid: b325974af7916ff42bbf3ab9901a997f, type: 2}
+  - clyde: {fileID: 177796, guid: 697a64b810fd6dd4c8ed88ff0d95a5c4, type: 2}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
